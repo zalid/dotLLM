@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(dotnet:*)",
+      "Bash(mkdir:*)",
+      "WebFetch",
+      "Bash(gh pr:*)",
+      "Bash(gh api:*)",
+      "WebSearch",
+      "Bash(gh repo:*)"
+    ]
+  }
+}
