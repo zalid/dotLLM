@@ -277,6 +277,15 @@ public sealed unsafe class DequantizeTests
             Dequantize.ToFloat32(nint.Zero, 32, QuantizationType.F32, dest));
     }
 
+    [Fact]
+    public void Q8_0_NonAlignedCount_Throws()
+    {
+        // elementCount = 33 is not a multiple of 32 — must throw before any data access.
+        float[] dest = new float[64];
+        Assert.Throws<ArgumentException>(() =>
+            Dequantize.ToFloat32(nint.Zero, 33, QuantizationType.Q8_0, dest));
+    }
+
     // ──────────────────── Helpers ────────────────────
 
     private static nint AllocQ8_0Block(Half scale, Func<int, sbyte> fillQs)

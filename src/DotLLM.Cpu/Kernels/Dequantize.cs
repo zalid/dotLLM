@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Numerics.Tensors;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -70,8 +69,10 @@ public static unsafe class Dequantize
     [SkipLocalsInit]
     private static void DequantizeQ8_0(nint src, long elementCount, Span<float> dest)
     {
-        Debug.Assert(elementCount % Q8_0GroupSize == 0,
-            $"Q8_0 element count must be a multiple of {Q8_0GroupSize}, got {elementCount}");
+        if (elementCount % Q8_0GroupSize != 0)
+            throw new ArgumentException(
+                $"Q8_0 element count must be a multiple of {Q8_0GroupSize}, got {elementCount}",
+                nameof(elementCount));
 
         if (Avx2.IsSupported)
         {
