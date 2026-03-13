@@ -50,7 +50,7 @@ For each reviewer comment, post a reply indicating what was done:
 - For inline review comments, reply in-thread: `gh api repos/{owner}/{repo}/pulls/{pr_number}/comments -X POST --field body="..." --field in_reply_to={comment_id}`
 - For issue comments, reply as a new issue comment: `gh api repos/{owner}/{repo}/issues/{pr_number}/comments -X POST --field body="..."`
 
-**Bot identity**: Check if `$CLAUDE_GH_TOKEN` is available. If so, post as the bot (see memory for bot posting instructions). If not, post as the user's own identity. Always ask permission before posting.
+**Bot identity**: Always post as the bot. Source `gh-app-token.sh`, export `GH_TOKEN="$CLAUDE_GH_TOKEN"`, run the `gh api` command, then `unset GH_TOKEN` — all in a single Bash call (env does not persist between calls). Do NOT ask for permission — just post. If the token script is missing or fails, fall back to posting as the user's own identity.
 
 ### Additional arguments
 
