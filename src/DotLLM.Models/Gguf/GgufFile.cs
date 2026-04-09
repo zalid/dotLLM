@@ -1,5 +1,7 @@
 using System.IO.MemoryMappedFiles;
+using System.Numerics;
 using System.Runtime.CompilerServices;
+using DotLLM.Core.Configuration;
 
 namespace DotLLM.Models.Gguf;
 
@@ -75,6 +77,7 @@ public sealed unsafe class GgufFile : IDisposable
         List<GgufTensorDescriptor> tensors;
         long streamPositionAfterInfos;
 
+        long fileLength;
         using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
         using (var reader = new BinaryReader(fs))
         {
@@ -82,13 +85,31 @@ public sealed unsafe class GgufFile : IDisposable
             rawMetadata = GgufReader.ReadMetadata(reader, header);
             tensors = GgufReader.ReadTensorInfos(reader, header);
             streamPositionAfterInfos = fs.Position;
+            fileLength = fs.Length;
         }
 
         var metadata = new GgufMetadata(rawMetadata);
 
         // Alignment: default 32, overridable via general.alignment.
         uint alignment = metadata.GetUInt32OrDefault("general.alignment", 32);
+        if (alignment == 0 || !BitOperations.IsPow2(alignment))
+            throw new InvalidDataException(
+                $"GGUF alignment must be a power of 2, got {alignment}.");
+
         long dataSectionOffset = AlignUp(streamPositionAfterInfos, alignment);
+
+        // Validate tensor data fits within the file.
+        long dataSectionLength = fileLength - dataSectionOffset;
+        foreach (var tensor in tensors)
+        {
+            long tensorBytes = tensor.QuantizationType.ComputeByteCount(tensor.Shape.ElementCount);
+            long endOffset = (long)tensor.DataOffset + tensorBytes;
+            if (endOffset > dataSectionLength)
+                throw new InvalidDataException(
+                    $"Tensor '{tensor.Name}' data extends beyond file boundary " +
+                    $"(offset {tensor.DataOffset}, size {tensorBytes}, " +
+                    $"data section size {dataSectionLength}).");
+        }
 
         var tensorsByName = new Dictionary<string, GgufTensorDescriptor>(tensors.Count);
         foreach (var tensor in tensors)
