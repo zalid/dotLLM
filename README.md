@@ -7,8 +7,9 @@
 [![CI](https://github.com/kkokosa/dotLLM/actions/workflows/ci.yml/badge.svg)](https://github.com/kkokosa/dotLLM/actions/workflows/ci.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![.NET](https://img.shields.io/badge/.NET-10-purple.svg)](https://dotnet.microsoft.com/)
+[![Website](https://img.shields.io/badge/website-dotllm.dev-0a7aca.svg)](https://dotllm.dev/)
 
-[Documentation](docs/) · [Roadmap](docs/ROADMAP.md) · [Discussions](https://github.com/kkokosa/dotLLM/discussions)
+[Website](https://dotllm.dev/) · [Documentation](docs/) · [Roadmap](docs/ROADMAP.md) · [Discussions](https://github.com/kkokosa/dotLLM/discussions)
 
 </div>
 
@@ -68,6 +69,52 @@ dotLLM is organized as a layered architecture where each layer depends only on t
 Each project ships as a separate NuGet package, so users pull in only what they need. `DotLLM.Core` defines all abstractions (`ITensor`, `IBackend`, `IModel`, `ISamplerStep`, etc.) while concrete implementations live in their respective projects.
 
 ## Getting Started
+
+There are two paths: grab a pre-built release and run it, or clone the repo and build from source.
+
+### Use a pre-built release
+
+Pick one of three install options.
+
+**Option A — install as a global .NET tool** (requires .NET 10 runtime):
+
+```bash
+dotnet tool install -g DotLLM.Cli
+dotllm run QuantFactory/SmolLM-135M-GGUF -p "The capital of France is" -n 64
+```
+
+**Option B — download a self-contained binary** (no .NET install needed — the runtime is bundled):
+
+Grab the archive for your platform from the [latest release](https://github.com/kkokosa/dotLLM/releases/latest):
+
+- Windows x64: `dotllm-<version>-win-x64.zip`
+- Linux x64: `dotllm-<version>-linux-x64.tar.gz`
+- macOS (Apple Silicon): `dotllm-<version>-osx-arm64.tar.gz`
+
+Unpack and run:
+
+```bash
+# Linux / macOS
+tar -xzf dotllm-<version>-linux-x64.tar.gz
+cd dotllm-<version>-linux-x64
+./dotllm run QuantFactory/SmolLM-135M-GGUF -p "The capital of France is" -n 64
+./dotllm serve QuantFactory/SmolLM-135M-GGUF          # OpenAI-compatible API + chat UI
+```
+
+```powershell
+# Windows
+Expand-Archive dotllm-<version>-win-x64.zip -DestinationPath .
+cd dotllm-<version>-win-x64
+.\dotllm.exe run QuantFactory/SmolLM-135M-GGUF -p "The capital of France is" -n 64
+```
+
+*Experimental:* Native AOT builds for Linux and Windows are also attached to each release (`dotllm-<version>-aot-<rid>.{zip,tar.gz}`) — smaller and faster to start, but please [file an issue](https://github.com/kkokosa/dotLLM/issues/new) if you hit a crash.
+
+**Option C — reference the libraries from your .NET app** — see [NuGet Packages](#nuget-packages) below.
+
+### Build from source
+
+Clone the repository and build with the .NET 10 SDK. The remainder of this section (Prerequisites, Build, Run, CLI reference, Debug, Tests, Benchmarks) covers the from-source workflow.
 
 ### Prerequisites
 
@@ -403,10 +450,44 @@ To run comparison benchmarks against [llama.cpp](https://github.com/ggerganov/ll
 
 > [llama.cpp](https://github.com/ggerganov/llama.cpp) is optional. All dotLLM benchmarks work without it. The `--llamacpp` flag simply adds a side-by-side comparison column.
 
-There is no NuGet package yet -- the project is in early development. Follow the [Roadmap](#roadmap) for progress toward the first release.
+## NuGet Packages
+
+dotLLM ships as a set of NuGet packages so you can reference only what you need from your own .NET app:
+
+| Package | Description |
+|---------|-------------|
+| [`DotLLM.Core`](https://www.nuget.org/packages/DotLLM.Core) | Core abstractions — tensor types, backend interfaces, model config, sampling, attention strategies, diagnostics hooks |
+| [`DotLLM.Cpu`](https://www.nuget.org/packages/DotLLM.Cpu) | CPU backend — SIMD-optimized quantized matmul, RMSNorm, RoPE, softmax, attention |
+| [`DotLLM.Cuda`](https://www.nuget.org/packages/DotLLM.Cuda) | CUDA GPU backend — PTX kernels via CUDA Driver API, cuBLAS prefill, CPU/GPU hybrid offload |
+| [`DotLLM.Models`](https://www.nuget.org/packages/DotLLM.Models) | Memory-mapped GGUF/SafeTensors loaders, parameterized `TransformerBlock` (Llama/Mistral/Phi/Qwen/DeepSeek) |
+| [`DotLLM.Tokenizers`](https://www.nuget.org/packages/DotLLM.Tokenizers) | BPE, SentencePiece, HuggingFace tokenizer.json, Jinja2-subset chat templates |
+| [`DotLLM.Engine`](https://www.nuget.org/packages/DotLLM.Engine) | Inference engine — KV-cache, scheduler, samplers, constrained decoding, speculative decoding |
+| [`DotLLM.Server`](https://www.nuget.org/packages/DotLLM.Server) | OpenAI-compatible HTTP server, tool calling, rate limiting, built-in chat UI |
+| [`DotLLM.HuggingFace`](https://www.nuget.org/packages/DotLLM.HuggingFace) | HuggingFace Hub search and GGUF download/caching |
+| [`DotLLM.Diagnostics`](https://www.nuget.org/packages/DotLLM.Diagnostics) | Interpretability hooks — activation capture, logit lens, logprobs |
+| [`DotLLM.Telemetry`](https://www.nuget.org/packages/DotLLM.Telemetry) | `System.Diagnostics.Metrics` counters and `Activity`-based tracing |
+| [`DotLLM.Cli`](https://www.nuget.org/packages/DotLLM.Cli) | `dotnet tool` — the `dotllm` command (run / chat / serve / model management) |
+
+Install the engine plus CPU backend for a minimal setup:
+
+```bash
+dotnet add package DotLLM.Engine
+dotnet add package DotLLM.Cpu
+dotnet add package DotLLM.Models
+dotnet add package DotLLM.Tokenizers
+```
+
+Or install the CLI as a global tool:
+
+```bash
+dotnet tool install -g DotLLM.Cli
+```
+
+> All packages track the same version and are published together on each release.
 
 ## News
 
+- **2026-04** — **First public release (v0.1.0-preview.1)** — dotLLM goes public. [NuGet packages](#nuget-packages) for all 10 libraries + `DotLLM.Cli` as a global `dotnet tool`. Self-contained single-file downloads for Windows / Linux / macOS (Apple Silicon) and experimental Native AOT builds for Linux / Windows attached to every [GitHub Release](https://github.com/kkokosa/dotLLM/releases). Companion website at [dotllm.dev](https://dotllm.dev/) ([#119](https://github.com/kkokosa/dotLLM/issues/119))
 - **2026-04** — **Wave 7**: CPU performance cleanup pass — `TopKSampler` replaces full `Array.Sort` with a hand-rolled size-K min-heap (`O(N log K)`, stack-resident scratch); `JsonSchemaConstraint` adds first-char bucketing to skip the ~160 MB of struct clones per mask build when the tracker rejects most leading characters, plus LRU eviction instead of the previous full-flush cache overflow; `Dequantize.Q5_0` gains an AVX2 path matching Q8_0's throughput (reuses `MatMulQ5_0.ExtractQ5HighBits` / `vpshufb` bit-extraction); `BpeTokenizer` pre-splits special tokens via the existing `Trie.TryMatchLongest` instead of the O(n × m) linear scan; `ComputeThreadPool` now pins the caller (inference) thread to the first candidate P-core on first `Dispatch`, eliminating the hybrid-CPU stall where pinned P-core workers idled at the barrier waiting for an E-core caller. New BenchmarkDotNet suites for TopK sampling, schema mask build, and special-token encode ([#109](https://github.com/kkokosa/dotLLM/issues/109))
 - **2026-04** — **Phase 7 begins**: Logprobs — OpenAI-compatible `logprobs: true` + `top_logprobs: N` (0-20) on `/v1/chat/completions` and `/v1/completions`. Per-token log-softmax captured before sampling, returned in both streaming SSE chunks and non-streaming responses. Chat UI gains opt-in logprobs visualization: color-coded token confidence (green/lime/yellow/orange/red), hover tooltips with top-K alternatives and probabilities, diagnostic cues for low confidence, ambiguity, and sampling effect. `DotLLM.Sample.Logprobs` console sample with ANSI-colored output ([#101](https://github.com/kkokosa/dotLLM/issues/101))
 - **2026-04** — **Phase 6 complete**: Speculative decoding — draft-verify-accept loop with modified rejection sampling. A small draft model proposes K candidate tokens; the target model verifies in one batched forward pass. Greedy fast-path for temperature=0. `IKvCache.Rollback()` for KV-cache truncation on rejection. `IDecodingConstraint.Clone()` for constraint rollback. Serve UI gains draft model selector and K slider. `--speculative-model` and `--speculative-k` CLI options. Speculative acceptance rate in response timings ([#98](https://github.com/kkokosa/dotLLM/issues/98))
@@ -486,6 +567,14 @@ Contributions are welcome! dotLLM uses an issue-driven workflow — every change
 ## Contact
 
 Questions, ideas, or feedback? Open a thread in [GitHub Discussions](https://github.com/kkokosa/dotLLM/discussions).
+
+## Author
+
+Built by **[Konrad Kokosa](https://kokosa.dev/)** — .NET MVP, author of *Pro .NET Memory Management* (2nd ed.), and AI/agents engineer at Nethermind. Over 20 years of .NET performance work.
+
+- Website: [dotllm.dev](https://dotllm.dev/)
+- Personal: [kokosa.dev](https://kokosa.dev/)
+- GitHub: [@kkokosa](https://github.com/kkokosa)
 
 ## License
 
