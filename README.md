@@ -485,6 +485,60 @@ dotnet tool install -g DotLLM.Cli
 
 > All packages track the same version and are published together on each release.
 
+### Host the OpenAI API in your ASP.NET app
+
+`DotLLM.Server` is a library — reference it from your own ASP.NET Core host to expose dotLLM's OpenAI-compatible routes. Two patterns are supported.
+
+**Mode 1 — run a dedicated dotLLM WebApplication inside your process.** Simplest; you hand off model loading and routing to dotLLM.
+
+```csharp
+using DotLLM.Server;
+
+var options = new ServerOptions
+{
+    Model = "llama-3.2-3b.Q4_K_M.gguf",
+    Device = "gpu",
+    GpuLayers = 32,
+    Port = 8080,
+    PromptCacheEnabled = true,
+    UsePaged = true,
+};
+
+using var state = ServerStartup.LoadModel(options.Model, options);
+var app = ServerStartup.BuildApp(state, args: [], serveUi: true);
+
+await app.RunAsync($"http://localhost:{options.Port}");
+```
+
+**Mode 2 — attach dotLLM routes to your own `WebApplication`.** Use this when you want dotLLM's endpoints alongside your own routes, middleware, and services.
+
+```csharp
+using DotLLM.Server;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Your own services...
+builder.Services.AddAuthentication();
+
+var app = builder.Build();
+
+// Your own middleware and routes...
+app.UseAuthentication();
+app.MapGet("/hello", () => "hi");
+
+// Load a model and mount dotLLM's OpenAI-compatible endpoints:
+var state = ServerStartup.LoadModel("llama-3.2-3b.Q4_K_M.gguf", new ServerOptions
+{
+    Device = "cpu",
+    PromptCacheEnabled = true,
+});
+app.MapDotLLMEndpoints(serveUi: false);
+
+app.Run();
+```
+
+Both modes transparently reuse the embedded chat UI assets if `serveUi: true`. The `ServerState` is `IDisposable` — dispose it on shutdown to release the model and KV-cache.
+
 ## News
 
 - **2026-04** — **First public release (v0.1.0-preview.1)** — dotLLM goes public. [NuGet packages](#nuget-packages) for all 10 libraries + `DotLLM.Cli` as a global `dotnet tool`. Self-contained single-file downloads for Windows / Linux / macOS (Apple Silicon) and experimental Native AOT builds for Linux / Windows attached to every [GitHub Release](https://github.com/kkokosa/dotLLM/releases). Companion website at [dotllm.dev](https://dotllm.dev/) ([#119](https://github.com/kkokosa/dotLLM/issues/119))
