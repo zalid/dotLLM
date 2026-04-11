@@ -32,6 +32,12 @@
     <MinVerDefaultPreReleaseIdentifiers>preview.0</MinVerDefaultPreReleaseIdentifiers>
   </PropertyGroup>
 
+  <!-- Deterministic, reproducible builds when running on GitHub Actions.
+       Normalizes source paths in embedded PDBs / SourceLink mappings. -->
+  <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
   <ItemGroup Condition="'$(IsPackable)' != 'false'">
     <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" Condition="Exists('$(MSBuildThisFileDirectory)README.md')" />
     <None Include="$(MSBuildThisFileDirectory)docs\icon.png" Pack="true" PackagePath="\" Condition="Exists('$(MSBuildThisFileDirectory)docs\icon.png')" />
